@@ -10,7 +10,11 @@
       "Bash(python3 -c \"import sys,json; words=json.load\\(sys.stdin\\); print\\(json.dumps\\({k: words[0][k] for k in ['term','status','register','category']}, indent=2\\)\\)\")",
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({k: d[k] for k in ['term','status','definition']}, indent=2\\)\\)\")",
       "Bash(python3 -c \"import sys,json; words=json.load\\(sys.stdin\\); [print\\(f'{w[\\\\\"term\\\\\"]:20} status={w[\\\\\"status\\\\\"]}'\\) for w in words]\")",
-      "Bash(docker volume inspect *)"
+      "Bash(docker volume inspect *)",
+      "Bash(npm run *)",
+      "Bash(echo \"PID: $!\")",
+      "Skill(run)",
+      "Skill(run:*)"
     ]
   },
   "enabledPlugins": {

@@ -10,9 +10,9 @@ const CATEGORIES = ["business", "technology", "social", "academic", "idiom", "ge
 const STATUSES = ["new", "learning", "mastered"];
 
 const STATUS_ACTIVE: Record<string, string> = {
-  new: "bg-base text-text border-border",
-  learning: "bg-amber-100 text-amber-700 border-amber-200",
-  mastered: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  new: "bg-panel text-text border-border",
+  learning: "bg-amber-400/10 text-amber-400 border-amber-400/30",
+  mastered: "bg-emerald-400/10 text-emerald-400 border-emerald-400/30",
 };
 
 function Chip({
@@ -29,8 +29,10 @@ function Chip({
   return (
     <button
       onClick={onClick}
-      className={`text-xs px-2.5 py-0.5 rounded border transition-colors ${
-        active ? activeClass : "bg-surface text-muted border-border hover:border-accent"
+      className={`text-xs px-2.5 py-0.5 rounded-md border transition-all active:scale-95 ${
+        active
+          ? activeClass
+          : "bg-panel/50 text-muted border-border hover:border-muted/50 hover:text-text"
       }`}
     >
       {label}
@@ -61,11 +63,7 @@ export default function VocabPage() {
     setWords((prev) => prev.map((w) => (w.id === updated.id ? updated : w)));
   }
 
-  function toggle(
-    current: string | null,
-    value: string,
-    setter: (v: string | null) => void,
-  ) {
+  function toggle(current: string | null, value: string, setter: (v: string | null) => void) {
     setter(current === value ? null : value);
   }
 
@@ -99,18 +97,23 @@ export default function VocabPage() {
   }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-semibold text-text">Vocabulary Builder</h1>
+    <div className="animate-fade-up">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="font-display text-xl font-semibold text-text">Vocabulary</h1>
+          {words.length > 0 && (
+            <p className="text-xs text-muted mt-0.5">
+              {words.length} word{words.length !== 1 ? "s" : ""}
+            </p>
+          )}
+        </div>
         {words.length > 0 && (
-          <button
-            onClick={handleExport}
-            className="text-xs px-3 py-1.5 border border-border rounded-md text-muted hover:border-accent hover:text-accent transition-colors"
-          >
-            Export JSON
+          <button onClick={handleExport} className="btn-ghost text-xs">
+            Export
           </button>
         )}
       </div>
+
       <AddWordForm onAdded={handleAdded} />
 
       {words.length > 0 && (
@@ -120,12 +123,12 @@ export default function VocabPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search terms or definitions…"
-            className="w-full border border-border rounded-md px-3 py-2 text-sm bg-surface focus:outline-none focus:border-accent"
+            className="input-field"
           />
 
           <div className="space-y-2">
             <div className="flex flex-wrap gap-1.5 items-center">
-              <span className="text-xs text-muted w-16 shrink-0">Status</span>
+              <span className="text-xs text-muted w-16 shrink-0 font-display">Status</span>
               {STATUSES.map((s) => (
                 <Chip
                   key={s}
@@ -138,26 +141,26 @@ export default function VocabPage() {
             </div>
 
             <div className="flex flex-wrap gap-1.5 items-center">
-              <span className="text-xs text-muted w-16 shrink-0">Register</span>
+              <span className="text-xs text-muted w-16 shrink-0 font-display">Register</span>
               {REGISTERS.map((r) => (
                 <Chip
                   key={r}
                   label={r}
                   active={filterRegister === r}
-                  activeClass="bg-accent text-white border-accent"
+                  activeClass="bg-accent/10 text-accent border-accent/30"
                   onClick={() => toggle(filterRegister, r, setFilterRegister)}
                 />
               ))}
             </div>
 
             <div className="flex flex-wrap gap-1.5 items-center">
-              <span className="text-xs text-muted w-16 shrink-0">Category</span>
+              <span className="text-xs text-muted w-16 shrink-0 font-display">Category</span>
               {CATEGORIES.map((c) => (
                 <Chip
                   key={c}
                   label={c}
                   active={filterCategory === c}
-                  activeClass="bg-accent text-white border-accent"
+                  activeClass="bg-accent/10 text-accent border-accent/30"
                   onClick={() => toggle(filterCategory, c, setFilterCategory)}
                 />
               ))}

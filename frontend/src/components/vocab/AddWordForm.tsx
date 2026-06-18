@@ -32,7 +32,7 @@ export default function AddWordForm({ onAdded }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3 mb-8">
+    <form onSubmit={handleSubmit} className="space-y-2.5 mb-8">
       <div className="flex gap-2">
         <input
           type="text"
@@ -40,43 +40,50 @@ export default function AddWordForm({ onAdded }: Props) {
           onChange={(e) => setTerm(e.target.value)}
           placeholder="Word or phrase"
           required
-          className="flex-1 border border-border rounded-md px-3 py-2 text-sm bg-surface focus:outline-none focus:border-accent"
+          className="input-field"
         />
         <button
           type="button"
           onClick={() => setUseAI((v) => !v)}
-          title={useAI ? "AI is on — click to disable" : "AI is off — click to generate a full word card"}
-          className={`shrink-0 text-xs px-3 py-2 rounded-md border transition-colors ${
+          title={
             useAI
-              ? "bg-accent text-white border-accent"
-              : "bg-surface text-muted border-border hover:border-accent"
+              ? "AI is on — click to disable"
+              : "AI is off — click to generate a full word card"
+          }
+          className={`shrink-0 text-xs px-3 py-2 rounded-lg border font-mono transition-all ${
+            useAI
+              ? "bg-accent/15 text-accent border-accent/40"
+              : "bg-panel text-muted border-border hover:border-muted/50 hover:text-text"
           }`}
         >
-          {useAI ? "AI on" : "AI off"}
+          AI {useAI ? "on" : "off"}
         </button>
       </div>
-      <div>
-        <textarea
-          value={context}
-          onChange={(e) => setContext(e.target.value)}
-          placeholder="Context (optional) — where you heard it"
-          rows={2}
-          className="w-full border border-border rounded-md px-3 py-2 text-sm bg-surface focus:outline-none focus:border-accent resize-none"
-        />
-      </div>
+
+      <textarea
+        value={context}
+        onChange={(e) => setContext(e.target.value)}
+        placeholder="Context — where you encountered this word (optional)"
+        rows={2}
+        className="input-field resize-none"
+      />
+
       <div className="flex items-center gap-3">
-        <button
-          type="submit"
-          disabled={loading}
-          className="px-4 py-2 bg-accent text-white text-sm rounded-md disabled:opacity-50"
-        >
-          {loading ? (useAI ? "Generating…" : "Adding…") : (useAI ? "Add with AI" : "Add word")}
+        <button type="submit" disabled={loading} className="btn-primary">
+          {loading
+            ? useAI
+              ? "Generating…"
+              : "Adding…"
+            : useAI
+            ? "Add with AI"
+            : "Add word"}
         </button>
         {!useAI && (
-          <span className="text-xs text-muted">Quick add — fill in details via Edit later</span>
+          <span className="text-xs text-muted/60">Fill in details later via Edit</span>
         )}
       </div>
-      {error && <p className="text-red-600 text-sm">{error}</p>}
+
+      {error && <p className="text-red-400 text-xs">{error}</p>}
     </form>
   );
 }

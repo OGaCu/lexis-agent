@@ -36,19 +36,15 @@ export default function AddTickerForm({ onAdded }: Props) {
         type="text"
         value={ticker}
         onChange={(e) => setTicker(e.target.value.toUpperCase())}
-        placeholder="Ticker symbol"
+        placeholder="TICKER"
         maxLength={5}
         required
-        className="border border-border rounded-md px-3 py-2 text-sm bg-surface focus:outline-none focus:border-accent w-36"
+        className="input-field w-36 font-mono uppercase tracking-widest"
       />
-      <button
-        type="submit"
-        disabled={loading}
-        className="px-4 py-2 bg-accent text-white text-sm rounded-md disabled:opacity-50"
-      >
-        {loading ? "Adding..." : "Add"}
+      <button type="submit" disabled={loading} className="btn-primary">
+        {loading ? "Adding…" : "Add"}
       </button>
-      {error && <p className="text-red-600 text-sm self-center">{error}</p>}
+      {error && <p className="text-red-400 text-xs self-center">{error}</p>}
     </form>
   );
 }

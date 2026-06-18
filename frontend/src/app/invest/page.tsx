@@ -27,8 +27,11 @@ export default function InvestPage() {
   }
 
   return (
-    <div>
-      <h1 className="text-xl font-semibold text-text mb-6">Investment Research</h1>
+    <div className="animate-fade-up">
+      <div className="mb-8">
+        <h1 className="font-display text-xl font-semibold text-text">Invest</h1>
+        <p className="text-xs text-muted mt-0.5">Watchlist & AI-generated market briefings</p>
+      </div>
       <AddTickerForm onAdded={handleAdded} />
       <Watchlist rows={rows} onDeleted={handleDeleted} />
       <BriefingCard initial={briefing} />

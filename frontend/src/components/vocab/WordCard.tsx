@@ -14,9 +14,9 @@ const CATEGORIES = ["business", "technology", "social", "academic", "idiom", "ge
 const STATUSES = ["new", "learning", "mastered"];
 
 const STATUS_BADGE: Record<string, string> = {
-  new: "bg-base text-muted",
-  learning: "bg-amber-100 text-amber-700",
-  mastered: "bg-emerald-100 text-emerald-700",
+  new: "bg-panel text-muted",
+  learning: "bg-amber-400/10 text-amber-400",
+  mastered: "bg-emerald-400/10 text-emerald-400",
 };
 
 interface Draft {
@@ -44,10 +44,6 @@ function draftFromWord(word: Word): Draft {
     status: word.status ?? "new",
   };
 }
-
-const inputCls =
-  "w-full border border-border rounded px-2 py-1.5 text-sm bg-base focus:outline-none focus:border-accent";
-const labelCls = "block text-xs text-muted mb-1";
 
 export default function WordCard({ word, onDeleted, onUpdated }: Props) {
   const [editing, setEditing] = useState(false);
@@ -99,73 +95,73 @@ export default function WordCard({ word, onDeleted, onUpdated }: Props) {
 
   if (editing) {
     return (
-      <div className="bg-surface border border-accent rounded-md p-4 space-y-3">
+      <div className="bg-panel border border-accent/30 rounded-xl p-4 space-y-3 animate-fade-up">
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className={labelCls}>Term</label>
+            <label className="label-xs">Term</label>
             <input
               value={draft.term}
               onChange={(e) => set("term", e.target.value)}
-              className={inputCls}
+              className="input-field"
             />
           </div>
           <div>
-            <label className={labelCls}>Context (optional)</label>
+            <label className="label-xs">Context (optional)</label>
             <input
               value={draft.context}
               onChange={(e) => set("context", e.target.value)}
               placeholder="where you heard it"
-              className={inputCls}
+              className="input-field"
             />
           </div>
         </div>
 
         <div>
-          <label className={labelCls}>Definition</label>
+          <label className="label-xs">Definition</label>
           <textarea
             value={draft.definition}
             onChange={(e) => set("definition", e.target.value)}
             rows={2}
-            className={`${inputCls} resize-none`}
+            className="input-field resize-none"
           />
         </div>
 
         <div>
-          <label className={labelCls}>Usage explanation</label>
+          <label className="label-xs">Usage explanation</label>
           <textarea
             value={draft.usage_explanation}
             onChange={(e) => set("usage_explanation", e.target.value)}
             rows={2}
-            className={`${inputCls} resize-none`}
+            className="input-field resize-none"
           />
         </div>
 
         <div>
-          <label className={labelCls}>Sample sentences (one per line)</label>
+          <label className="label-xs">Sample sentences (one per line)</label>
           <textarea
             value={draft.sample_sentences}
             onChange={(e) => set("sample_sentences", e.target.value)}
             rows={3}
-            className={`${inputCls} resize-none`}
+            className="input-field resize-none"
           />
         </div>
 
         <div>
-          <label className={labelCls}>Related words (comma-separated)</label>
+          <label className="label-xs">Related words (comma-separated)</label>
           <input
             value={draft.related_words}
             onChange={(e) => set("related_words", e.target.value)}
-            className={inputCls}
+            className="input-field"
           />
         </div>
 
         <div className="grid grid-cols-3 gap-3">
           <div>
-            <label className={labelCls}>Register</label>
+            <label className="label-xs">Register</label>
             <select
               value={draft.register}
               onChange={(e) => set("register", e.target.value)}
-              className={inputCls}
+              className="input-field"
             >
               {REGISTERS.map((r) => (
                 <option key={r} value={r}>{r}</option>
@@ -173,11 +169,11 @@ export default function WordCard({ word, onDeleted, onUpdated }: Props) {
             </select>
           </div>
           <div>
-            <label className={labelCls}>Category</label>
+            <label className="label-xs">Category</label>
             <select
               value={draft.category}
               onChange={(e) => set("category", e.target.value)}
-              className={inputCls}
+              className="input-field"
             >
               {CATEGORIES.map((c) => (
                 <option key={c} value={c}>{c}</option>
@@ -185,11 +181,11 @@ export default function WordCard({ word, onDeleted, onUpdated }: Props) {
             </select>
           </div>
           <div>
-            <label className={labelCls}>Status</label>
+            <label className="label-xs">Status</label>
             <select
               value={draft.status}
               onChange={(e) => set("status", e.target.value)}
-              className={inputCls}
+              className="input-field"
             >
               {STATUSES.map((s) => (
                 <option key={s} value={s}>{s}</option>
@@ -199,16 +195,12 @@ export default function WordCard({ word, onDeleted, onUpdated }: Props) {
         </div>
 
         <div className="flex gap-3 pt-1">
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="px-3 py-1.5 bg-accent text-white text-sm rounded disabled:opacity-50"
-          >
+          <button onClick={handleSave} disabled={saving} className="btn-primary">
             {saving ? "Saving…" : "Save"}
           </button>
           <button
             onClick={() => setEditing(false)}
-            className="px-3 py-1.5 text-sm text-muted hover:text-text"
+            className="text-sm text-muted hover:text-text transition-colors"
           >
             Cancel
           </button>
@@ -217,58 +209,70 @@ export default function WordCard({ word, onDeleted, onUpdated }: Props) {
     );
   }
 
-  const statusStyle = STATUS_BADGE[word.status] ?? "bg-base text-muted";
+  const statusBadge = STATUS_BADGE[word.status ?? "new"] ?? STATUS_BADGE.new;
 
   return (
-    <div className="bg-surface border border-border rounded-md p-4">
-      <div className="flex items-start justify-between gap-2">
-        <h2 className="text-lg font-bold text-text">{word.term}</h2>
-        <span className={`text-xs px-2 py-0.5 rounded shrink-0 ${statusStyle}`}>
+    <div className="card">
+      <div className="flex items-start justify-between gap-3">
+        <h2 className="font-display text-base font-semibold text-text leading-snug">
+          {word.term}
+        </h2>
+        <span className={`text-xs px-2 py-0.5 rounded-md shrink-0 font-mono ${statusBadge}`}>
           {word.status ?? "new"}
         </span>
       </div>
 
-      <p className="text-sm text-text mt-2">{word.definition}</p>
+      <p className="text-sm text-muted mt-1.5 leading-relaxed">{word.definition}</p>
 
       {expanded && (
-        <div className="mt-3 space-y-3">
-          <p className="text-sm text-muted">{word.usage_explanation}</p>
+        <div className="mt-3 pt-3 border-t border-border space-y-3 animate-fade-up">
+          <p className="text-sm text-muted/80 leading-relaxed">{word.usage_explanation}</p>
 
-          <ol className="text-sm space-y-1 list-decimal list-inside text-text">
+          <ol className="text-sm space-y-1.5 list-none">
             {word.sample_sentences.map((s, i) => (
-              <li key={i}>{s}</li>
+              <li key={i} className="flex gap-2 text-text/80">
+                <span className="font-mono text-accent/40 shrink-0 text-xs pt-0.5 w-4">
+                  {i + 1}
+                </span>
+                <span>{s}</span>
+              </li>
             ))}
           </ol>
 
           {word.related_words.length > 0 && (
-            <p className="text-sm text-muted">
-              Related: {word.related_words.join(", ")}
+            <p className="text-xs text-muted">
+              Related:{" "}
+              <span className="text-text/70">{word.related_words.join(", ")}</span>
             </p>
           )}
 
           <div className="flex gap-1.5 flex-wrap">
-            <span className="text-xs bg-base text-muted px-2 py-0.5 rounded">{word.register}</span>
-            <span className="text-xs bg-base text-muted px-2 py-0.5 rounded">{word.category}</span>
+            <span className="text-xs bg-panel text-muted px-2 py-0.5 rounded-md font-mono">
+              {word.register}
+            </span>
+            <span className="text-xs bg-panel text-muted px-2 py-0.5 rounded-md font-mono">
+              {word.category}
+            </span>
           </div>
         </div>
       )}
 
-      <div className="flex gap-3 mt-3">
+      <div className="flex gap-4 mt-3">
         <button
           onClick={() => setExpanded((v) => !v)}
-          className="text-sm text-muted hover:text-text transition-colors"
+          className="text-xs text-muted hover:text-accent transition-colors"
         >
-          {expanded ? "Less" : "More"}
+          {expanded ? "Collapse" : "Expand"}
         </button>
         <button
           onClick={startEdit}
-          className="text-sm text-muted hover:text-accent transition-colors"
+          className="text-xs text-muted hover:text-accent transition-colors"
         >
           Edit
         </button>
         <button
           onClick={handleDelete}
-          className="text-sm text-muted hover:text-red-600 transition-colors"
+          className="text-xs text-muted hover:text-red-400 transition-colors"
         >
           Delete
         </button>

@@ -7,12 +7,12 @@ interface Props {
   onDeleted: (ticker: string) => void;
 }
 
-function changeColor(pct: string): string {
-  if (pct === "N/A") return "text-muted";
+function formatChange(pct: string): { color: string; prefix: string } {
+  if (pct === "N/A") return { color: "text-muted", prefix: "" };
   const val = parseFloat(pct);
-  if (val > 0) return "text-green-600";
-  if (val < 0) return "text-red-600";
-  return "text-text";
+  if (val > 0) return { color: "text-emerald-400", prefix: "▲ " };
+  if (val < 0) return { color: "text-red-400", prefix: "▼ " };
+  return { color: "text-muted", prefix: "" };
 }
 
 export default function Watchlist({ rows, onDeleted }: Props) {
@@ -26,34 +26,40 @@ export default function Watchlist({ rows, onDeleted }: Props) {
   }
 
   return (
-    <table className="w-full text-sm mb-8 border border-border rounded-md overflow-hidden">
-      <thead className="bg-base text-muted">
-        <tr>
-          <th className="text-left px-3 py-2 font-medium">Ticker</th>
-          <th className="text-right px-3 py-2 font-medium">Price</th>
-          <th className="text-right px-3 py-2 font-medium">Change</th>
-          <th className="px-3 py-2" />
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row) => (
-          <tr key={row.ticker} className="border-t border-border bg-surface">
-            <td className="px-3 py-2 font-semibold text-text">{row.ticker}</td>
-            <td className="px-3 py-2 text-right text-text">{row.price}</td>
-            <td className={`px-3 py-2 text-right ${changeColor(row.change_percent)}`}>
-              {row.change_percent}
-            </td>
-            <td className="px-3 py-2 text-right">
+    <div className="mb-8 bg-surface border border-border rounded-xl overflow-hidden">
+      <div className="grid grid-cols-[1fr_auto_auto_auto] text-xs text-muted px-4 py-2.5 border-b border-border font-display">
+        <span>Ticker</span>
+        <span className="text-right w-24">Price</span>
+        <span className="text-right w-28">Change</span>
+        <span className="w-16" />
+      </div>
+      {rows.map((row, i) => {
+        const { color, prefix } = formatChange(row.change_percent);
+        return (
+          <div
+            key={row.ticker}
+            className={`grid grid-cols-[1fr_auto_auto_auto] px-4 py-3 items-center transition-colors hover:bg-panel ${
+              i !== rows.length - 1 ? "border-b border-border" : ""
+            }`}
+          >
+            <span className="font-mono font-semibold text-text text-sm tracking-wider">
+              {row.ticker}
+            </span>
+            <span className="font-mono text-sm text-text text-right w-24">{row.price}</span>
+            <span className={`font-mono text-sm text-right w-28 ${color}`}>
+              {prefix}{row.change_percent}
+            </span>
+            <div className="w-16 text-right">
               <button
                 onClick={() => handleDelete(row.ticker)}
-                className="text-muted hover:text-red-600 transition-colors"
+                className="text-xs text-muted hover:text-red-400 transition-colors"
               >
                 Remove
               </button>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
