@@ -12,5 +12,8 @@
       "Bash(python3 -c \"import sys,json; words=json.load\\(sys.stdin\\); [print\\(f'{w[\\\\\"term\\\\\"]:20} status={w[\\\\\"status\\\\\"]}'\\) for w in words]\")",
       "Bash(docker volume inspect *)"
     ]
+  },
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true
   }
 }

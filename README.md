@@ -2,6 +2,16 @@
 
 A personal AI platform with two tools: **Vocabulary Builder** and **Investment Research Assistant**.
 
+[![Built with Claude Code](https://img.shields.io/badge/built%20with-Claude%20Code-blueviolet?style=flat-square&logo=anthropic)](https://claude.ai/code)
+[![Model](https://img.shields.io/badge/model-claude--sonnet--4--6-blueviolet?style=flat-square)](https://docs.anthropic.com)
+
+[![Maintenance](https://img.shields.io/badge/maintained-yes-brightgreen?style=flat-square)]()
+[![Last Commit](https://img.shields.io/github/last-commit/OGaCu/lexis-agent?style=flat-square)]() [![Open Issues](https://img.shields.io/github/issues/OGaCu/lexis-agent?style=flat-square)]()  [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)]()  [![CI](https://img.shields.io/github/actions/workflow/status/OGaCu/lexis-agent/claude.yml?style=flat-square&logo=github)]() [![Docker](https://img.shields.io/badge/docker-ready-blue?style=flat-square&logo=docker)]()
+
+
+
+
+
 ## Prerequisites
 
 - Docker and Docker Compose
