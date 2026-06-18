@@ -51,6 +51,7 @@ const labelCls = "block text-xs text-muted mb-1";
 
 export default function WordCard({ word, onDeleted, onUpdated }: Props) {
   const [editing, setEditing] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState<Draft>(draftFromWord(word));
 
@@ -219,34 +220,46 @@ export default function WordCard({ word, onDeleted, onUpdated }: Props) {
   const statusStyle = STATUS_BADGE[word.status] ?? "bg-base text-muted";
 
   return (
-    <div className="bg-surface border border-border rounded-md p-4 space-y-3">
+    <div className="bg-surface border border-border rounded-md p-4">
       <div className="flex items-start justify-between gap-2">
         <h2 className="text-lg font-bold text-text">{word.term}</h2>
-        <div className="flex gap-1.5 shrink-0 flex-wrap justify-end">
-          <span className={`text-xs px-2 py-0.5 rounded ${statusStyle}`}>
-            {word.status ?? "new"}
-          </span>
-          <span className="text-xs bg-base text-muted px-2 py-0.5 rounded">{word.register}</span>
-          <span className="text-xs bg-base text-muted px-2 py-0.5 rounded">{word.category}</span>
-        </div>
+        <span className={`text-xs px-2 py-0.5 rounded shrink-0 ${statusStyle}`}>
+          {word.status ?? "new"}
+        </span>
       </div>
 
-      <p className="text-sm text-text">{word.definition}</p>
-      <p className="text-sm text-muted">{word.usage_explanation}</p>
+      <p className="text-sm text-text mt-2">{word.definition}</p>
 
-      <ol className="text-sm space-y-1 list-decimal list-inside text-text">
-        {word.sample_sentences.map((s, i) => (
-          <li key={i}>{s}</li>
-        ))}
-      </ol>
+      {expanded && (
+        <div className="mt-3 space-y-3">
+          <p className="text-sm text-muted">{word.usage_explanation}</p>
 
-      {word.related_words.length > 0 && (
-        <p className="text-sm text-muted">
-          Related: {word.related_words.join(", ")}
-        </p>
+          <ol className="text-sm space-y-1 list-decimal list-inside text-text">
+            {word.sample_sentences.map((s, i) => (
+              <li key={i}>{s}</li>
+            ))}
+          </ol>
+
+          {word.related_words.length > 0 && (
+            <p className="text-sm text-muted">
+              Related: {word.related_words.join(", ")}
+            </p>
+          )}
+
+          <div className="flex gap-1.5 flex-wrap">
+            <span className="text-xs bg-base text-muted px-2 py-0.5 rounded">{word.register}</span>
+            <span className="text-xs bg-base text-muted px-2 py-0.5 rounded">{word.category}</span>
+          </div>
+        </div>
       )}
 
-      <div className="flex gap-3">
+      <div className="flex gap-3 mt-3">
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className="text-sm text-muted hover:text-text transition-colors"
+        >
+          {expanded ? "Less" : "More"}
+        </button>
         <button
           onClick={startEdit}
           className="text-sm text-muted hover:text-accent transition-colors"
