@@ -121,8 +121,21 @@ async def add_word(req: AddWordRequest):
 
 
 @app.get("/words")
-async def list_words():
-    rows = await db.fetch_all("SELECT * FROM words ORDER BY created_at DESC")
+async def list_words(
+    category: str | None = None,
+    status: str | None = None,
+    register: str | None = None,
+):
+    clauses = []
+    params: dict = {}
+    for field, val in (("category", category), ("status", status), ("register", register)):
+        if val is not None:
+            clauses.append(f"{field} = :{field}")
+            params[field] = val
+    where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+    rows = await db.fetch_all(
+        f"SELECT * FROM words {where} ORDER BY created_at DESC", params
+    )
     return [_serialize(r) for r in rows]
 
 
