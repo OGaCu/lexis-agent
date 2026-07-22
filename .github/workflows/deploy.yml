@@ -1,0 +1,27 @@
+name: Deploy to EC2
+
+# Push to main -> SSH into the EC2 box -> pull latest -> rebuild & restart.
+# This is the interim mechanism. Target end state is AWS CodePipeline +
+# CodeDeploy (see DEPLOY_EC2.md "Where this is heading").
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}   # allows a manual "Run workflow" button in the Actions tab
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}       # EC2 public IP or DNS
+          username: ${{ secrets.EC2_USER }}   # e.g. ec2-user (Amazon Linux) or ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}     # contents of your .pem private key
+          script: |
+            set -e
+            cd ~/lexis
+            git pull origin main
+            docker compose -f docker-compose.prod.yml up -d --build
+            docker image prune -f   # reclaim disk on the small free-tier volume

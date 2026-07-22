@@ -1,3 +1,4 @@
+import asyncio
 import os
 import json
 import uuid
@@ -7,6 +8,8 @@ import anthropic
 from databases import Database
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+
+import notion_sync
 
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://lexis:lexis@db:5432/lexis")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
@@ -112,7 +115,9 @@ async def add_word(req: AddWordRequest):
         "status": "new",
         "created_at": now,
     })
-    return await _fetch_word(record_id)
+    word = await _fetch_word(record_id)
+    asyncio.create_task(notion_sync.sync_word_created(word))
+    return word
 
 
 @app.get("/words")
@@ -151,11 +156,14 @@ async def update_word(word_id: str, req: PatchWordRequest):
         f"UPDATE words SET {', '.join(set_clauses)} WHERE id = :id",
         params,
     )
-    return await _fetch_word(word_id)
+    word = await _fetch_word(word_id)
+    asyncio.create_task(notion_sync.sync_word_updated(word))
+    return word
 
 
 @app.delete("/words/{word_id}")
 async def delete_word(word_id: str):
+    asyncio.create_task(notion_sync.sync_word_deleted(word_id))
     result = await db.execute("DELETE FROM words WHERE id = :id", {"id": word_id})
     if result == 0:
         raise HTTPException(status_code=404, detail="Word not found")
@@ -182,6 +190,9 @@ def _serialize(row) -> dict:
                 d[key] = []
         elif not isinstance(val, (list, dict)):
             d[key] = []
+    import uuid as _uuid
+    if isinstance(d.get("id"), _uuid.UUID):
+        d["id"] = str(d["id"])
     if isinstance(d.get("created_at"), datetime):
         d["created_at"] = d["created_at"].isoformat()
     if not d.get("status"):
