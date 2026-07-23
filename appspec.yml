@@ -1,0 +1,10 @@
+version: 0.0
+os: linux
+files:
+  - source: /
+    destination: /home/ec2-user/lexis
+hooks:
+  ApplicationStart:
+    - location: scripts/start.sh
+      timeout: 600
+      runas: ec2-user
