@@ -2,7 +2,7 @@
 #
 # user-data.sh — EC2 first-boot bootstrap for the Lexis vocab stack.
 #
-# This is the "code" half of the hybrid launch (Option C in infra/FAST-LAUNCH.md):
+# This is the "code" half of the hybrid launch (see infra/FAST-LAUNCH.md):
 # the AMI already has the slow, stable parts baked in (Docker, git, the 2 GB swap
 # file). This script runs ONCE on first boot and does only the fast, changing part:
 # fetch the latest code and start the stack. Result: a fresh instance serves the
@@ -23,7 +23,7 @@ APP_USER="ec2-user"                                    # "ubuntu" on Ubuntu AMIs
 set -euxo pipefail
 
 APP_HOME="/home/$APP_USER"
-APP_DIR="$APP_HOME/lexis"   # the GitHub Actions deploy also expects exactly ~/lexis
+APP_DIR="$APP_HOME/lexis"   # CodeDeploy also expects exactly ~/lexis
 
 # 1. Fetch the code (clone on a truly fresh box, pull if the AMI already had it).
 if [ -d "$APP_DIR/.git" ]; then

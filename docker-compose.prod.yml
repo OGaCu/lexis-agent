@@ -1,11 +1,13 @@
-# Production compose for EC2 — vocab API only.
-# Runs: Postgres + vocab-service + api-gateway (public on :8000).
-# Redis / invest-service / scheduler / frontend are intentionally omitted
-# (vocab-service does not use Redis). To add the web UI later, uncomment the
-# `frontend` block at the bottom and open port 3001 in the EC2 security group.
+# Production compose for EC2 — vocab stack.
+# Always runs: Postgres + vocab-service + api-gateway (public on :8000).
+# The `frontend` service is gated behind the "web" compose profile, so the
+# default (API-only) deploy stays lightweight on a 1 GB free-tier box.
 #
 # Usage on the server:
-#   docker compose -f docker-compose.prod.yml up -d --build
+#   docker compose -f docker-compose.prod.yml up -d --build            # API only
+#   COMPOSE_PROFILES=web docker compose -f docker-compose.prod.yml up -d --build   # API + web UI
+# (Put COMPOSE_PROFILES=web and PUBLIC_API_URL in .env to make it the default
+#  everywhere, including the CodeDeploy deploy — see DEPLOY_EC2.md step 8.)
 
 services:
   db:
@@ -43,19 +45,23 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # --- Optional web UI (uncomment to enable) ------------------------------
-  # frontend:
-  #   build: ./frontend
-  #   ports:
-  #     - "3001:3000"
-  #   environment:
-  #     # Point the browser at the gateway's PUBLIC address (build-time bake-in).
-  #     NEXT_PUBLIC_API_URL: http://<YOUR_EC2_PUBLIC_IP>:8000
-  #   depends_on:
-  #     - api-gateway
-  #   restart: unless-stopped
-  # Also add to api-gateway env: EXTRA_CORS_ORIGINS=http://<YOUR_EC2_PUBLIC_IP>:3001
-  # ------------------------------------------------------------------------
+  # Web UI — only started when the "web" profile is active (see header).
+  frontend:
+    profiles: ["web"]
+    build:
+      context: ./frontend
+      args:
+        # Baked into the JS bundle at build time -> the browser calls this URL.
+        # Set PUBLIC_API_URL in .env to your gateway's public address, e.g.
+        # http://<YOUR_EC2_PUBLIC_IP>:8000
+        NEXT_PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:8000}
+    ports:
+      - "3001:3000"
+    depends_on:
+      - api-gateway
+    restart: unless-stopped
+  # The gateway must also allow the browser origin. Add to .env:
+  #   EXTRA_CORS_ORIGINS=http://<YOUR_EC2_PUBLIC_IP>:3001
 
 volumes:
   db_data:

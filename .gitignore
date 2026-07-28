@@ -2,4 +2,3 @@
 .env
 backfill_notion.py
 frontend/.next/
-.github/workflows/deploy.yml

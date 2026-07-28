@@ -5,7 +5,7 @@ A step-by-step guide for someone new to deployment. By the end you will have:
 1. A public URL like `http://<EC2-IP>:8000/vocab/words` that returns your vocab data as JSON.
 2. Automatic redeploys: every push to the `main` branch updates the running server.
 
-We deploy **API only** for now (Postgres + `vocab-service` + `api-gateway`). The web UI can be added later without redoing any of this — see [Adding the web UI later](#8-optional--adding-the-web-ui-later).
+We deploy **API only** for now (Postgres + `vocab-service` + `api-gateway`). The web UI can be added later without redoing any of this — see **step 8 (Add the web UI)** below.
 
 **Time:** ~45–60 minutes the first time. **Cost:** $0 if you stay inside the AWS Free Tier.
 
@@ -28,7 +28,7 @@ Browser / curl
 
 Only port **8000** is exposed to the internet. Postgres is never reachable from outside.
 
-**Important about "existing data":** a brand-new EC2 database starts empty and is auto-populated from `db/init.sql` + `db/seed.sql` (the seed words). It will **not** contain the data currently sitting in your local Docker volume. To copy your local data across, see [Migrating your local data](#9-optional--migrating-your-local-data).
+**Important about "existing data":** a brand-new EC2 database starts empty and is auto-populated from `db/init.sql` + `db/seed.sql` (the seed words). It will **not** contain the data currently sitting in your local Docker volume. To copy your local data across, see **step 10 (Migrating your local data)** below.
 
 ---
 
@@ -113,6 +113,20 @@ sudo curl -SL https://github.com/docker/compose/releases/latest/download/docker-
 sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 ```
 
+TroubleShoot if build image on Mac (arm64) but want to run on EC2 with Linux (x86_64/amd64): 
+```bash
+  mkdir -p ~/.docker/cli-plugins
+   
+  curl -SL https://github.com/docker/buildx/releases/download/v0.34.1/buildx-v0.34.1.linux-amd64 \
+     -o ~/.docker/cli-plugins/docker-buildx
+   
+  chmod +x ~/.docker/cli-plugins/docker-buildx
+
+  # then sanity check with
+  ls -lh ~/.docker/cli-plugins/docker-buildx
+  # should tens of MB 
+```
+
 **Add a 2 GB swap file.** The free-tier box has only 1 GB RAM; building Docker images (pip installs) can run out of memory without swap.
 
 ```bash
@@ -130,6 +144,12 @@ exit
 ssh -i ~/.ssh/lexis-key.pem ec2-user@<EC2-IP>
 docker version   # should print client + server with no "permission denied"
 ```
+**Implementation Troubleshoting** if running `docker version` gives permisson denied:
+if running `groups` in terminal, and docker doesn't show up:
+then run `newgrp docker`
+then rerun `docker version`
+
+running `getent group docker` and getting output `docker:x:992:ec2-user`verifies that $USER (ec2-user in our case) is added to the group named docker. 
 
 > **Ubuntu note:** replace the install block with:
 > ```bash
@@ -160,14 +180,13 @@ Create the `.env` file. For **viewing data you do not need any API keys** — a 
 cat > .env <<'EOF'
 DATABASE_URL=postgresql://lexis:lexis@db:5432/lexis
 VOCAB_SERVICE_URL=http://vocab-service:8001
-INVEST_SERVICE_URL=http://invest-service:8002
 ANTHROPIC_API_KEY=
 NOTION_API_KEY=
 NOTION_DATABASE_ID=
 EOF
 ```
 
-(You only need `ANTHROPIC_API_KEY` if you later call the "add word with AI" endpoint. Leaving Notion blank disables sync.)
+(To just **view** data you need no keys. `ANTHROPIC_API_KEY` is required only to **add words** with AI enrichment — you'll fill it in step 8. Leaving Notion blank disables sync.)
 
 ---
 
@@ -207,60 +226,132 @@ You should see the JSON list of words. That is your public vocab API. Other endp
 
 ---
 
-## 7. Auto-deploy on push to `main` (GitHub Actions)
+## 7. Auto-deploy on push to `main` (AWS CodeDeploy)
 
-The repo already includes `.github/workflows/deploy.yml`. On every push to `main` it SSHes into your EC2 box, runs `git pull`, and rebuilds. You just need to give GitHub the login details as **secrets**.
+Deploys are handled by **AWS CodeDeploy**: a push to `main` flows through CodePipeline →
+CodeDeploy, which runs `docker compose up` on the box.
 
-### 7a. Create a dedicated SSH key for GitHub (recommended)
+The full setup — IAM roles, the CodeDeploy agent, `appspec.yml` / `scripts/start.sh`, the
+application + deployment group, and the CodePipeline — lives in **[`AWS-native-CICD.md`](AWS-native-CICD.md)**.
+That doc is the single source of truth for CI/CD, and it also lists the **relaunch
+prerequisites** (agent + IAM role + tag) any new box needs to be deployable.
 
-Rather than handing GitHub your personal `.pem`, make a key **on the server** just for deploys:
-
-```bash
-# ON THE SERVER
-ssh-keygen -t ed25519 -f ~/.ssh/deploy_key -N ""
-cat ~/.ssh/deploy_key.pub >> ~/.ssh/authorized_keys   # allow this key to log in
-cat ~/.ssh/deploy_key                                 # <-- copy this ENTIRE private key
-```
-
-### 7b. Add the secrets in GitHub
-
-In your repo on GitHub → **Settings → Secrets and variables → Actions → New repository secret**. Add three:
-
-| Secret name   | Value                                                        |
-|---------------|--------------------------------------------------------------|
-| `EC2_HOST`    | your `<EC2-IP>` (or Elastic IP / DNS name)                   |
-| `EC2_USER`    | `ec2-user` (or `ubuntu`)                                     |
-| `EC2_SSH_KEY` | the full private key text from `cat ~/.ssh/deploy_key`, including the `-----BEGIN...` and `-----END...` lines |
-
-### 7c. Test it
-
-Push the new files to `main`:
-
-```bash
-# ON YOUR LAPTOP, in the repo
-git add docker-compose.prod.yml .github/workflows/deploy.yml DEPLOY_EC2.md
-git commit -m "Add EC2 production deploy setup"
-git push origin main
-```
-
-Go to the repo's **Actions** tab → watch the **Deploy to EC2** run go green. Then re-check `http://<EC2-IP>:8000/vocab/words`. From now on, every push to `main` redeploys automatically. You can also trigger it manually from the Actions tab (**Run workflow**).
+Once set up, verify: push to `main` → pipeline Source green → Deploy green → re-check
+`http://<EC2-IP>:8000/vocab/words`. From then on every push to `main` redeploys.
 
 ---
 
-## 8. Optional — Adding the web UI later
+## 8. Add the web UI (frontend) — on the same EC2 box (cheapest, $0 extra)
 
-Nothing above needs to change. When you want the visual view:
+The visual UI is the Next.js `frontend` container. The cheapest way to serve it is to run it **on the same EC2 instance**, next to the API — no extra AWS resources, no extra bill. Nothing from steps 1–7 changes; you're just turning on one more container.
 
-1. In `docker-compose.prod.yml`, uncomment the `frontend` block and set `NEXT_PUBLIC_API_URL: http://<EC2-IP>:8000`.
-2. Add `EXTRA_CORS_ORIGINS=http://<EC2-IP>:3001` to the `api-gateway` service environment (the gateway reads this to allow the browser origin — see `services/api-gateway/main.py`).
-3. In the EC2 **security group**, add an inbound rule: Custom TCP, port **3001**, Anywhere.
-4. Push to `main`. The UI comes up at `http://<EC2-IP>:3001`.
+The `frontend` service is already defined in `docker-compose.prod.yml`, gated behind a compose **profile** called `web`. Default deploys (steps 5–7) skip it; turning on the profile brings it up. This keeps the API-only path lightweight and means the migration to AWS-native CI/CD (section 11) doesn't have to special-case the UI.
 
-Note: the Next.js frontend is heavier — with it running you will definitely want the swap file from step 3, and you may feel the 1 GB RAM limit. If it struggles, move to a larger instance (leaves the free tier) or serve the frontend on Vercel instead (the CORS rule already allows `*.vercel.app`).
+### How the pieces change
+
+```
+Browser
+  ├── http://<EC2-IP>:3001   →  frontend (Next.js UI)  ─┐
+  └── http://<EC2-IP>:8000   →  api-gateway  ───────────┴─►  vocab-service  →  Postgres
+```
+
+The UI is server-rendered on :3001, but the **browser** calls the API directly on :8000. Two things follow from that:
+- The API URL is **baked into the UI at build time** (`NEXT_PUBLIC_API_URL`), so it must be set to your public address *before* the image builds.
+- The gateway must **allow the UI's origin** through CORS (`EXTRA_CORS_ORIGINS`).
+
+Both are driven entirely by `.env` on the server, so no tracked file needs editing — which is exactly what makes the CI/CD migration clean.
+
+### 8a. Get a stable IP first (recommended)
+
+Because `NEXT_PUBLIC_API_URL` is baked into the build, if your public IP changes (it does on every stop/start) the UI would point at a dead address until the next rebuild. Allocate a free **Elastic IP** and associate it with the instance (EC2 → Elastic IPs → Allocate → Associate). Use that IP everywhere below as `<EC2-IP>`.
+
+### 8b. Add the Anthropic key so you can *add* words
+
+Viewing words needs no key, but the "add word" flow uses Claude to generate the definition, examples, and related words. On the server, edit `.env` and set your key:
+
+```bash
+# ON THE SERVER, in ~/lexis
+nano .env
+```
+
+Set (or add) this line — get a key at https://console.anthropic.com/ → **API Keys**:
+
+```
+ANTHROPIC_API_KEY=sk-ant-...your key...
+```
+
+> Treat this key like a password. It lives only in `.env` on the server (which is gitignored and never committed). If it ever leaks, rotate it in the Anthropic console.
+
+### 8c. Point the UI at your API and open CORS
+
+Still in `.env`, add these three lines (replace `<EC2-IP>` with your Elastic IP):
+
+```
+COMPOSE_PROFILES=web
+PUBLIC_API_URL=http://<EC2-IP>:8000
+EXTRA_CORS_ORIGINS=http://<EC2-IP>:3001
+```
+
+- `COMPOSE_PROFILES=web` — activates the frontend container for *every* `docker compose` command (including the CodeDeploy deploy), so you never have to change the deploy script.
+- `PUBLIC_API_URL` — baked into the UI build as `NEXT_PUBLIC_API_URL` (see the `frontend` block in `docker-compose.prod.yml`).
+- `EXTRA_CORS_ORIGINS` — the gateway reads this and allows the browser origin (see `services/api-gateway/main.py`).
+
+### 8d. Open port 3001 in the security group
+
+EC2 → your instance → **Security** tab → click the security group → **Edit inbound rules** → **Add rule**: **Custom TCP**, port **3001**, source **Anywhere (0.0.0.0/0)** → Save. (Now ports 22, 8000, 3001 are open — nothing else.)
+
+### 8e. Build and start (with the UI)
+
+```bash
+# ON THE SERVER, in ~/lexis
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+Because `COMPOSE_PROFILES=web` is now in `.env`, this brings up the frontend too. Verify:
+
+```bash
+docker compose -f docker-compose.prod.yml ps        # should now list "frontend" as well
+curl -I localhost:3001                               # -> HTTP/1.1 200 OK
+```
+
+Then open **`http://<EC2-IP>:3001`** in your browser. You should see the Lexis vocab UI, listing your words. Try adding a word — if the Anthropic key is set, it fills in the definition automatically.
+
+### 8f. It just works on the next push
+
+Since everything lives in `.env` on the server, the CodeDeploy pipeline from step 7 needs **no changes** — the next push to `main` runs the same `docker compose ... up -d --build` (via `scripts/start.sh`), picks up the `web` profile, and redeploys UI + API together.
+
+> **Memory note (1 GB free tier):** building the Next.js image is memory-hungry. The 2 GB swap file from step 3 is what keeps this build from being killed — don't skip it. If the box still struggles, either bump to a `t3.small` (leaves the free tier, ~$15/mo) or host only the frontend on **Vercel** (free for hobby use) pointing `NEXT_PUBLIC_API_URL` at your EC2 API — the gateway already allows `*.vercel.app` origins.
 
 ---
 
-## 9. Optional — Migrating your local data
+## 9. Changing which words ship by default (seed data)
+
+Fresh databases are auto-loaded from `db/init.sql` (schema) + `db/seed.sql` (words). `db/seed.sql` is the **single source of truth** for the starter word list — every `INSERT` uses `ON CONFLICT (id) DO NOTHING`, so re-running it never clobbers or duplicates existing rows.
+
+To refresh it from the live server, run the helper **from your laptop** — it SSHes to the
+box, dumps the `words` table, rewrites every row as an idempotent
+`INSERT ... ON CONFLICT (id) DO NOTHING`, and overwrites `db/seed.sql`:
+
+```bash
+EC2_HOST=<EC2-IP> ./infra/dump-seed.sh
+```
+
+(Optional env overrides — `EC2_USER`, `SSH_KEY`, `REMOTE_DIR`, `COMPOSE_FILE` — are
+documented in the script header. It uses `pg_dump --column-inserts`, which is required:
+plain `--data-only` emits `COPY` blocks, not the `INSERT` statements the seed file needs.)
+
+Then review the diff and commit:
+
+```bash
+git diff db/seed.sql && git add db/seed.sql && git commit -m 'chore(db): refresh seed from prod'
+```
+
+Note: seed changes only affect **new** volumes (first boot). To load them into an existing
+database, see section 10.
+
+---
+
+## 10. Optional — Migrating your local data
 
 If you want the words from your **local** machine on the server instead of just the seed data:
 
@@ -299,25 +390,15 @@ docker compose -f docker-compose.prod.yml up -d --build      # rebuild + start
 
 - **Free tier** covers 750 hours/month of one `t2.micro`/`t3.micro` for 12 months — one instance running 24/7 fits. Watch the AWS **Billing → Free Tier** dashboard.
 - Set a **Billing alert** (Billing → Budgets → create a $1 budget) so you get emailed if anything starts costing money.
-- Only ports 22 (you only) and 8000 (public) are open. Postgres is not exposed. Keep it that way.
+- Only ports 22 (you only), 8000 (public API), and 3001 (public UI, once you enable it in step 8) are open. Postgres is never exposed. Keep it that way.
 - The DB password is the default `lexis`. Because the DB port is never published, it is not internet-reachable — fine for this setup. If you later expose Postgres, change it.
 - To shut everything down and stop billing risk: **EC2 → Instance → Terminate** (deletes the box) or **Stop** (keeps it, minimal EBS storage cost).
 
 ---
 
-## Where this is heading (for the admin) — AWS-native CI/CD
+## 11. CI/CD details (for the admin) — AWS CodeDeploy
 
-GitHub Actions + SSH is the pragmatic interim solution. The stated end goal is an **AWS-native pipeline**. When ready, replace step 7 with:
+Deploys run through an **AWS-native pipeline** (CodePipeline → CodeDeploy). Setup, the
+relaunch prerequisites, and the optional CodeBuild + ECR add-on live in their own guide:
 
-- **AWS CodePipeline** — orchestrates the flow. Source stage connects to GitHub via a **CodeStar / GitHub connection** (OAuth, no SSH keys), so a push to `main` triggers the pipeline automatically.
-- **AWS CodeBuild** *(optional build stage)* — builds the Docker images in the cloud and pushes them to **Amazon ECR** (container registry), instead of building on the tiny EC2 box.
-- **AWS CodeDeploy** — the deploy stage. Install the **CodeDeploy agent** on the EC2 instance, add an `appspec.yml` to the repo describing lifecycle hooks (e.g. a script that runs `docker compose ... up -d`), and CodeDeploy pushes each revision out with proper rollout/rollback.
-
-Rough migration checklist for later:
-1. Create an **ECR** repo per service; change the pipeline to build+push images there.
-2. Attach an **IAM instance role** to EC2 granting ECR pull + CodeDeploy access; install the CodeDeploy agent.
-3. Add `appspec.yml` + deploy hook scripts to the repo.
-4. Create the **CodeStar GitHub connection**, then the **CodePipeline** (Source → [Build] → Deploy).
-5. Remove `.github/workflows/deploy.yml` once the pipeline is verified.
-
-This is more moving parts (IAM roles, ECR, agent, appspec) — worth it when you want managed rollouts, rollback, and no long-lived SSH key in GitHub. Not necessary just to get the service live today.
+**→ See [`AWS-native-CICD.md`](AWS-native-CICD.md).**
